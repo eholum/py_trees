@@ -315,6 +315,8 @@ def apply_type_hints(
     kwargs: dict[str, Any],
     logger: PortsLogger | None = None,
     ignore: set[str] | None = None,
+    node_tag: str = "",
+    node_name: str = "",
 ) -> tuple[bool, dict[str, Any]]:
     """
     Convert XML string kwargs into hinted types from the constructor signature.
@@ -331,6 +333,8 @@ def apply_type_hints(
       since any value satisfies it.
     - On conversion failure, the original string is preserved and a warning is printed.
       The function return indicates that there was a failure in one of the values.
+    - Optionally specify the node tag and name to provide additional hints in parsing error
+      messages.
 
     Returns:
         tuple[bool, dict[str, Any]]: Success of conversion (True if all values were successfully
@@ -341,6 +345,9 @@ def apply_type_hints(
         ignore = set()
     if logger is None:
         logger = NOOP_LOGGER
+
+    # Setup context string for error reporting on mismatched node types
+    context = f"'{node_tag}' (name='{node_name}'): " if node_tag else ""
 
     hints = collect_type_hints(constructor)
 
@@ -359,7 +366,7 @@ def apply_type_hints(
 
         # No type hint given: keep the original value
         if tp is None:
-            logger.warning(f"Skipping conversion for '{k}': no type hint available.")
+            logger.warning(f"{context}Skipping conversion for '{k}': no type hint available.")
             success = False
             continue
 
@@ -376,7 +383,7 @@ def apply_type_hints(
         if not isinstance(v, str):
             if tp is not type(v):
                 logger.warning(
-                    f"Type {type(v)} is not a string which can be converted, and not of the required "
+                    f"{context}Type {type(v)} is not a string which can be converted, and not of the required "
                     f"target type {tp}. Keeping the string and leaving conversion to the constructor."
                 )
                 success = False
@@ -386,11 +393,11 @@ def apply_type_hints(
         try:
             conversion_success, converted[k] = convert_str_to_type(v, tp, logger)
             if not conversion_success:
-                logger.warning(f"Failed to convert '{k}: {v}' to type '{tp}'. Result: '{converted[k]}'.")
+                logger.warning(f"{context}Failed to convert '{k}: {v}' to type '{tp}'. Result: '{converted[k]}'.")
                 success = False
         except Exception as e:
             # Resolving a type by name can raise anything the target module raises on import.
-            logger.warning(f"Failed to convert '{k}: {v}' to type '{tp}': {e}")
+            logger.warning(f"{context}Failed to convert '{k}: {v}' to type '{tp}': {e}")
             success = False
 
     return success, converted

@@ -219,6 +219,29 @@ class TestApplyTypeHints(unittest.TestCase):
         self.assertFalse(success)
         self.assertEqual(converted["totally_unknown"], "value")
 
+    def test_node_context_in_conversion_warning(self) -> None:
+        """A failed conversion warning should include the node tag and name."""
+        warnings: list[str] = []
+
+        class CapturingLogger:
+            def debug(self, msg: str) -> None: pass
+            def info(self, msg: str) -> None: pass
+            def warning(self, msg: str) -> None: warnings.append(msg)
+            def error(self, msg: str) -> None: pass
+
+        def ctor(value: float):
+            ...
+
+        success, converted = apply_type_hints(
+            ctor, {"value": "not_a_number"}, CapturingLogger(),
+            node_tag="SomeOldBehaviour", node_name="behavior_instance",
+        )
+        self.assertFalse(success)
+        self.assertEqual(converted["value"], "not_a_number")
+        self.assertTrue(len(warnings) > 0, "Expected at least one warning")
+        self.assertIn("SomeOldBehaviour", warnings[0])
+        self.assertIn("behavior_instance", warnings[0])
+
 
 if __name__ == "__main__":
     unittest.main()

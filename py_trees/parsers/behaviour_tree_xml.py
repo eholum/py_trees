@@ -671,7 +671,10 @@ def instantiate_ports_node(
     ctor_callable = node_registry[elem.tag]
     # Try to convert the constructor arguments to the correct type.
     ignore_keys = {"child", "children", "behaviour_class_name"}
-    success, constructor_kwargs = apply_type_hints(ctor_callable, constructor_kwargs, logger=logger, ignore=ignore_keys)
+    success, constructor_kwargs = apply_type_hints(
+        ctor_callable, constructor_kwargs, logger=logger, ignore=ignore_keys,
+        node_tag=elem.tag, node_name=instance_name,
+    )
     if not success:
         logger.warning(
             "Failed to apply type hints to constructor arguments. See error log. Proceeding, but leaving "
@@ -880,7 +883,10 @@ def build_tree_from_xml(
                 constructor_kwargs[key] = value
 
             ignore_keys = {"child", "children", "behaviour_class_name"}
-            success, constructor_kwargs = apply_type_hints(cls, constructor_kwargs, logger=logger, ignore=ignore_keys)
+            success, constructor_kwargs = apply_type_hints(
+                cls, constructor_kwargs, logger=logger, ignore=ignore_keys,
+                node_tag=elem.tag, node_name=node_name,
+            )
             if not success:
                 logger.warning(
                     "Failed to apply type hints to constructor arguments. See error log. "
